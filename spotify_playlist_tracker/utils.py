@@ -164,7 +164,7 @@ def read_tracks_from_json(playlist_name):
         print("No existing JSON")
 
 
-def update_tracks_json(playlist_name, new_tracks, removed_tracks):
+def update_tracks_json(playlist_name, new_tracks, removed_tracks, create_backup=True):
     """Update a json and create a backup for today."""
 
     filename = playlist_name.replace(' ', '-')
@@ -177,9 +177,10 @@ def update_tracks_json(playlist_name, new_tracks, removed_tracks):
         with open(file_path + '.json', 'r') as file:
             existing_tracks = json.load(file)
 
-        print(f"  Creating backup for date: {datetime.date.today().strftime('%d %b %Y')}")
-        with open(file_path + '-' + datetime.date.today().strftime('%d-%m-%Y') + '.json', 'w') as file:
-            json.dump(existing_tracks, file, indent = 0)
+        if create_backup:
+            print(f"  Creating backup for date: {datetime.date.today().strftime('%d %b %Y')}")
+            with open(file_path + '-' + datetime.date.today().strftime('%d-%m-%Y') + '.json', 'w') as file:
+                json.dump(existing_tracks, file, indent = 0)
 
         with open(file_path + '.json', 'w') as file:
             print("  Removing removed tracks")
