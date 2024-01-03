@@ -1,5 +1,8 @@
 from utils import *
 import sys
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
 token = sys.argv[1]
 user_id = sys.argv[2]
