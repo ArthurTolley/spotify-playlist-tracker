@@ -250,7 +250,7 @@ def read_tracks_from_json(playlist_name : str) -> dict or None:
 
     Returns
     -------
-        existing_tracks : dict
+        saved_tracks : dict
             A dictionary of track IDs with removed state and date added information.
     """
 
@@ -261,9 +261,9 @@ def read_tracks_from_json(playlist_name : str) -> dict or None:
     if os.path.exists(file_path):
         logging.info(f"Reading stored playlist information for {playlist_name}")
         with open(file_path, 'r') as file:
-            existing_tracks = json.load(file)
-        logging.info(f"  {len(existing_tracks)} tracks in {filename}.json")
-        return existing_tracks
+            saved_tracks = json.load(file)
+        logging.info(f"  {len(saved_tracks)} tracks in {filename}.json")
+        return saved_tracks
     else:
         logging.info("No existing JSON")
 
@@ -316,8 +316,8 @@ def update_tracks_json(playlist_name : str,
 
 def compare_tracklists(public_track_ids : list,
                        user_track_ids : list,
-                       user_JSON : dict) -> (list, list):
-    """Compare the new public tracklist, the user's tracklist and the existing json to find changes.
+                       saved_tracks : dict) -> (list, list):
+    """Compare the new public tracklist, the user's tracklist and the saved tracks to find changes.
 
     Parameters
     ----------
@@ -325,7 +325,7 @@ def compare_tracklists(public_track_ids : list,
             A list of track IDs from the public playlist.
         user_track_ids : list
             A list of track IDs from the user's playlist.
-        user_JSON : dict
+        saved_tracks : dict
             A dictionary of track IDs with removed state and date added information.
 
     Returns
@@ -333,10 +333,10 @@ def compare_tracklists(public_track_ids : list,
         new_tracks : list
     """
 
-    JSON_track_ids = list(user_JSON.keys())
+    saved_track_ids = list(saved_tracks.keys())
     unique_new_tracks = [track for track in public_track_ids if track not in user_track_ids]
-    new_tracks = [track for track in unique_new_tracks if track not in JSON_track_ids]
-    removed_tracks = [track for track in JSON_track_ids if track not in user_track_ids]
+    new_tracks = [track for track in unique_new_tracks if track not in saved_track_ids]
+    removed_tracks = [track for track in saved_track_ids if track not in user_track_ids]
 
     return new_tracks, removed_tracks
 
