@@ -27,7 +27,7 @@ if not existing_json:
 # Compare differences between tracks in user playlist and public playlist
 new_tracks, removed_tracks = compare_tracklists(public_playlist_tracks,
                                                 user_playlist_tracks,
-                                                user_JSON=existing_json)
+                                                saved_tracks=existing_json)
 
 # Update the JSON, saving out a copy of the previous one
 update_tracks_json(playlist_name=user_playlist_name,
