@@ -7,8 +7,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
 logging.info('Starting Public Playlist Tracker')
 token = get_access_token()
-user_id = '1172837699' # My User ID (Arthur Tolley) - https://open.spotify.com/user/1172837699?si=01ce7bd378384e14
-playlist_id = '37i9dQZF1DWY4lFlS4Pnso?si=8a3e6f1435694250' #Hot Hits UK - https://open.spotify.com/playlist/37i9dQZF1DWY4lFlS4Pnso?si=d767797688764421
+user_id = '1172837699' # My User ID (Arthur Tolley) - https://open.spotify.com/user/1172837699
+playlist_id = '37i9dQZF1DWY4lFlS4Pnso' #Hot Hits UK - https://open.spotify.com/playlist/37i9dQZF1DWY4lFlS4Pnso
 user_playlist_name = 'Hot Hits UK Tracker'
 
 script_directory = os.path.dirname(os.path.abspath(__file__))

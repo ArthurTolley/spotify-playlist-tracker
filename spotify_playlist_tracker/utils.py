@@ -193,8 +193,8 @@ def add_tracks_to_playlist(token : str,
     }
     response = requests.post(url, headers=headers, data=json.dumps(data))
 
-    if response.status_code == 201:
-        logging.info(f"  {len(track_ids)} tracks added to playlist '{playlist_id}' successfully.")
+    if response.status_code in (200, 201):
+        logging.info(f"{len(track_ids)} tracks added to playlist '{playlist_id}' successfully.")
     else:
         logging.error(f"Failed to add tracks to playlist. Status code: {response.status_code}")
 
