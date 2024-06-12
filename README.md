@@ -22,3 +22,6 @@ Step-by-step:
 - Create `.env` file with SPOTIPY credentials in `spotify_playlist_tracker`
 - Change `user_id`, `playlist_id` and `user_playlist_name` in `public_playlist_tracker.py`
 - Run `public_playlist_tracker.py`
+
+---
+Getting Spotify credentials to use in the `.env`: https://developer.spotify.com/documentation/web-api/concepts/apps
