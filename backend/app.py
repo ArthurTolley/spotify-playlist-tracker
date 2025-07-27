@@ -267,9 +267,9 @@ def track():
         if custom_name:
             new_playlist_name = custom_name
         else:
-            new_playlist_name = f"{source_playlist_name} (Trackify)"
+            new_playlist_name = f"{source_playlist_name} (Tracked)"
 
-        description = f"Tracked version of '{source_playlist_name}'. Created by Trackify."
+        description = f"Tracked version of '{source_playlist_name}'. Created by the Spotify Playlist Tracker."
         new_playlist_id = spotify_client.create_new_playlist(token, user_id, new_playlist_name, description)
         if track_uris:
             spotify_client.add_tracks_to_playlist(token, new_playlist_id, track_uris)

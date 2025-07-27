@@ -1,6 +1,6 @@
-# Trackify Spotify Playlist Tracker
+# Spotify Playlist Tracker
 
-Trackify is a web application that helps you manage and filter your favorite Spotify playlists. It allows you to "track" a source playlist (like the UK Top 100) and maintain your own version. If you remove a song you don't like from your version, Trackify remembers your choice and won't re-add it, even when the original playlist updates.
+This is a web application that helps you manage and filter your favorite Spotify playlists. It allows you to "track" a source playlist and maintain your own version. If you remove a song you don't like from your version, the app remembers your choice and won't re-add it, even when the original playlist updates.
 
 ## ✨ Features
 
@@ -20,58 +20,57 @@ Trackify is a web application that helps you manage and filter your favorite Spo
 
 ### Installation & Setup
 
-1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/your-username/trackify.git](https://github.com/your-username/trackify.git)
-   cd trackify
-   ```
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/your-username/spotify-playlist-tracker.git](https://github.com/your-username/spotify-playlist-tracker.git)
+    cd spotify-playlist-tracker
+    ```
 
-2. **Set up the Python Backend:**
-   ```bash
-   # Navigate to the backend directory
-   cd backend
+2.  **Set up the Python Backend:**
+    ```bash
+    # Navigate to the backend directory
+    cd backend
 
-   # Create and activate a virtual environment
-   # On macOS/Linux:
-   python3 -m venv venv
-   source venv/bin/activate
+    # Create and activate a virtual environment
+    # On macOS/Linux:
+    python3 -m venv venv
+    source venv/bin/activate
 
-   # On Windows:
-   python -m venv venv
-   .\venv\Scripts\activate
+    # On Windows:
+    python -m venv venv
+    .\venv\Scripts\activate
 
-   # Install dependencies
-   pip install -r requirements.txt
-   ```
+    # Install dependencies
+    pip install -r requirements.txt
+    ```
 
-3. **Configure Environment Variables:**
-   - Create a `.env` file in the `backend/` directory by copying the example:
-     ```bash
-     cp .env.example .env
-     ```
-   - Open the `.env` file and add your Spotify API credentials:
-     ```
-     SPOTIFY_CLIENT_ID='YOUR_SPOTIFY_CLIENT_ID'
-     SPOTIFY_CLIENT_SECRET='YOUR_SPOTIFY_CLIENT_SECRET'
-     FLASK_SECRET_KEY='A_RANDOM_SECRET_KEY_FOR_SESSIONS'
-     # You will also need to add your Redirect URI here from the Spotify Dev Dashboard
-     SPOTIFY_REDIRECT_URI='[http://127.0.0.1:5000/callback](http://127.0.0.1:5000/callback)'
-     ```
+3.  **Configure Environment Variables:**
+    -   Create a `.env` file in the `backend/` directory by copying the example:
+        ```bash
+        cp .env.example .env
+        ```
+    -   Open the `.env` file and add your Spotify API credentials:
+        ```
+        SPOTIFY_CLIENT_ID='YOUR_SPOTIFY_CLIENT_ID'
+        SPOTIFY_CLIENT_SECRET='YOUR_SPOTIFY_CLIENT_SECRET'
+        FLASK_SECRET_KEY='A_RANDOM_SECRET_KEY_FOR_SESSIONS'
+        # You will also need to add your Redirect URI here from the Spotify Dev Dashboard
+        SPOTIFY_REDIRECT_URI='[http://127.0.0.1:8888/callback](http://127.0.0.1:8888/callback)'
+        ```
 
-4. **Run the application:**
-   ```bash
-   # From the backend directory
-   flask run
-   ```
+4.  **Run the application:**
+    ```bash
+    # From the backend directory
+    flask run
+    ```
 
-5. **Access the Frontend:**
-   - Open the `frontend/index.html` file in your web browser.
+5.  **Access the Frontend:**
+    -   Open `http://127.0.0.1:8888` in your web browser.
 
 ## Usage
 
-1. Navigate to the web application.
-2. Click "Login with Spotify" and authorize the application.
-3. Paste the URL of a Spotify playlist you want to track and click "Track Playlist".
-4. To update the playlist with new songs, click the "Sync" button.
+1.  Navigate to the web application.
+2.  Click "Login with Spotify" and authorize the application.
+3.  Paste the URL of a Spotify playlist you want to track and click "Track Playlist".
 
 ---
