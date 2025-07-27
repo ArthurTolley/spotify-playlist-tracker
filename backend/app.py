@@ -113,9 +113,11 @@ def run_sync_job(tracked_playlist_db_id):
 # --- Routes ---
 @app.route('/')
 def index():
-    if not get_auth_token():
-        return '<h1>Welcome to Trackify!</h1><p>Please open the <strong>frontend/index.html</strong> file to log in.</p>'
-    return redirect(url_for('profile'))
+    if get_auth_token():
+        return redirect(url_for('profile'))
+
+    # This correctly renders your template from the 'backend/templates' folder
+    return render_template('index.html')
 
 @app.route('/login')
 def login():
