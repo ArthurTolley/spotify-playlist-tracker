@@ -21,7 +21,7 @@ app = Flask(__name__, template_folder='templates')
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 # --- Database Configuration ---
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///trackify.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///trackify.db")
 db.init_app(app)
 
 # --- Scheduler Configuration ---
@@ -287,7 +287,7 @@ def track():
         flash(f"Successfully created and tracked '{new_playlist_name}'!", 'success')
 
     except requests.exceptions.HTTPError as e:
-        flash(f"A Spotify API error occurred: {e.response.status_code} - {e.response.text}", 'error')
+        flash(f"A Spotify API error occurred: {e.response.status_code}. Please try again later.", 'error')
     except Exception as e:
         flash(f"An unexpected error occurred: {e}", 'error')
 
@@ -542,4 +542,5 @@ scheduler.start()
 
 if __name__ == '__main__':
     # use_reloader=False is important for APScheduler to avoid running jobs twice
-    app.run(debug=True, port=8888, use_reloader=False)
+    debug_mode = os.getenv('FLASK_ENV') == 'development'
+    app.run(debug=debug_mode, port=8888, use_reloader=False)
