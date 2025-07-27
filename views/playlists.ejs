@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Playlists</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <header>
+        <h1>Your Spotify Playlists</h1>
+    </header>
+
+    <main>
+        <% if (playlists.length === 0) { %>
+            <p>No playlists found.</p>
+        <% } else { %>
+            <ul>
+                <% playlists.forEach(playlist => { %>
+                    <li>
+                        <a href="<%= playlist.external_urls.spotify %>" target="_blank">
+                            <%= playlist.name %> - <%= playlist.tracks.total %> tracks
+                        </a>
+                    </li>
+                <% }) %>
+            </ul>
+        <% } %>
+    </main>
+</body>
+</html>

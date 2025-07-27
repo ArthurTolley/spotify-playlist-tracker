@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Register</title>
+</head>
+<body>
+    <%- include('partials/navbar') %>
+    <h1>Register for an account</h1>
+    <% if (!user || user === 'Guest') { %> <!-- Check if user is not logged in -->
+        <p>Already have an account? <a href="/login">Login here</a>.</p>
+        <form action="/register" method="POST">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit">Register</button>
+        </form>
+    <% } else { %> <!-- User is logged in -->
+        <p>You are already logged in as <%= user.username %>. <br> <a href="/logout">Logout</a></p>
+    <% } %> <!-- Close the if statement -->
+</body>
+</html>

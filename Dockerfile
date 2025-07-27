@@ -1,10 +1,21 @@
+# Dockerfile
 FROM node:lts-alpine
-ENV NODE_ENV=production
+
+# Set the working directory
 WORKDIR /usr/src/app
-COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
-RUN npm install --production --silent && mv node_modules ../
+
+# Copy package files first to leverage Docker's caching
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+RUN npm install -g nodemon
+
+# Copy the rest of your application code
 COPY . .
+
+# Expose the port your app runs on
 EXPOSE 3000
-RUN chown -R node /usr/src/app
-USER node
-CMD ["npm", "start"]
+
+# Command to run your app
+CMD ["node", "app.js", "nodemon"]

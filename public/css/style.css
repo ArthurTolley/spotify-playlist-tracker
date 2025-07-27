@@ -1,0 +1,72 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1, h2 {
+    color: #333;
+}
+
+form {
+    margin-top: 20px;
+}
+
+label {
+    display: block;
+    margin: 10px 0 5px;
+}
+
+input {
+    padding: 8px;
+    width: 100%;
+    max-width: 300px;
+    margin-bottom: 10px;
+}
+
+button {
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #218838;
+}
+
+
+/* Navbar styles */
+nav {
+    background-color: #3f3636; /* Navbar background color */
+}
+
+nav ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;              /* Use flexbox for layout */
+    justify-content: space-between; /* Space between left and right elements */
+    align-items: center;        /* Center vertically */
+}
+
+nav ul li {
+    margin: 0;                 /* Remove margin */
+}
+
+nav ul li a {
+    display: block;
+    color: white;
+    text-align: left;
+    padding: 10px 20px;
+    text-decoration: none;
+}
+
+nav ul li a:hover {
+    background-color: #111; /* Background color on hover */
+}
+
+.nav-text {
+    color: white;             /* Text color for additional text */
+    margin-left: 0px;       /* Space between links and text */
+}
