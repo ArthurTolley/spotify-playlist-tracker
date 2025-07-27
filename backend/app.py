@@ -50,10 +50,13 @@ def get_auth_token():
 def parse_playlist_id(url_or_uri):
     """Parses a Spotify URL, URI, or ID to extract just the playlist ID."""
     match = re.search(r'playlist/([a-zA-Z0-9]{22})', url_or_uri)
-    if match: return match.group(1)
+    if match:
+        return match.group(1)
     match = re.search(r':playlist:([a-zA-Z0-9]{22})', url_or_uri)
-    if match: return match.group(1)
-    if re.fullmatch(r'[a-zA-Z0-9]{22}', url_or_uri): return url_or_uri
+    if match:
+        return match.group(1)
+    if re.fullmatch(r'[a-zA-Z0-9]{22}', url_or_uri):
+        return url_or_uri
     return None
 
 # --- Background Job Definition ---
@@ -145,7 +148,8 @@ def logout():
 @app.route('/profile')
 def profile():
     token = get_auth_token()
-    if not token: return redirect(url_for('login'))
+    if not token:
+        return redirect(url_for('login'))
 
     sp = spotipy.Spotify(auth=token)
     user_info = sp.current_user()
@@ -223,7 +227,8 @@ def profile():
 @app.route('/track', methods=['POST'])
 def track():
     token = get_auth_token()
-    if not token: return redirect(url_for('login'))
+    if not token:
+        return redirect(url_for('login'))
 
     playlist_url = request.form.get('playlist_url')
     custom_name = request.form.get('custom_name', '').strip()
@@ -289,7 +294,8 @@ def track():
 @app.route('/sync/<int:tracked_playlist_db_id>', methods=['POST'])
 def sync(tracked_playlist_db_id):
     token = get_auth_token()
-    if not token: return redirect(url_for('login'))
+    if not token:
+        return redirect(url_for('login'))
 
     tracked_playlist = db.session.get(TrackedPlaylist, tracked_playlist_db_id)
     if not tracked_playlist:
@@ -340,7 +346,8 @@ def sync(tracked_playlist_db_id):
 
 @app.route('/toggle_auto_sync/<int:tracked_playlist_db_id>', methods=['POST'])
 def toggle_auto_sync(tracked_playlist_db_id):
-    if not get_auth_token(): return redirect(url_for('login'))
+    if not get_auth_token():
+        return redirect(url_for('login'))
 
     tracked_playlist = db.session.get(TrackedPlaylist, tracked_playlist_db_id)
     if not tracked_playlist:
@@ -372,7 +379,8 @@ def toggle_auto_sync(tracked_playlist_db_id):
 
 @app.route('/untrack/<int:tracked_playlist_db_id>', methods=['POST'])
 def untrack(tracked_playlist_db_id):
-    if not get_auth_token(): return redirect(url_for('login'))
+    if not get_auth_token():
+        return redirect(url_for('login'))
 
     playlist_to_untrack = db.session.get(TrackedPlaylist, tracked_playlist_db_id)
     if not playlist_to_untrack:
@@ -424,7 +432,8 @@ def undo_untrack():
 
 @app.route('/delete/<int:tracked_playlist_db_id>', methods=['POST'])
 def delete_playlist(tracked_playlist_db_id):
-    if not get_auth_token(): return redirect(url_for('login'))
+    if not get_auth_token():
+        return redirect(url_for('login'))
 
     playlist_to_delete = db.session.get(TrackedPlaylist, tracked_playlist_db_id)
     if not playlist_to_delete:
@@ -461,7 +470,8 @@ def delete_playlist(tracked_playlist_db_id):
 @app.route('/edit_playlist/<int:tracked_playlist_db_id>')
 def edit_playlist(tracked_playlist_db_id):
     token = get_auth_token()
-    if not token: return redirect(url_for('login'))
+    if not token:
+        return redirect(url_for('login'))
 
     sp = spotipy.Spotify(auth=token)
 
@@ -487,7 +497,8 @@ def edit_playlist(tracked_playlist_db_id):
 @app.route('/dislike_song/<int:tracked_playlist_db_id>/<track_uri>', methods=['POST'])
 def dislike_song(tracked_playlist_db_id, track_uri):
     token = get_auth_token()
-    if not token: return redirect(url_for('login'))
+    if not token:
+        return redirect(url_for('login'))
 
     sp = spotipy.Spotify(auth=token)
 
