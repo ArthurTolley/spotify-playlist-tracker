@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import String, ForeignKey, DateTime
 from typing import List
-from datetime import datetime # <-- 1. ADD THIS IMPORT
+from datetime import datetime
 
 # --- Database Setup ---
 # This setup allows us to define our models in a separate file.
@@ -21,10 +21,10 @@ class User(db.Model):
 
     # The user's Spotify ID will be our primary key
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    refresh_token: Mapped[str | None] = mapped_column(String) # <-- ADD THIS
+    refresh_token: Mapped[str | None] = mapped_column(String)
 
     # Establishes a one-to-many relationship with TrackedPlaylist
-    # A user can have many tracked playlists.
+    #  A user can have many tracked playlists.
     tracked_playlists: Mapped[List["TrackedPlaylist"]] = relationship(back_populates="user")
 
 class TrackedPlaylist(db.Model):

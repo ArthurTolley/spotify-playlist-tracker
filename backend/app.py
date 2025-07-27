@@ -9,8 +9,6 @@ from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 from datetime import datetime
 from flask_apscheduler import APScheduler
-
-# Import our new direct API client and the database models
 import spotify_client
 from models import db, User, TrackedPlaylist, DislikedSong
 
@@ -77,7 +75,7 @@ def run_sync_job(tracked_playlist_db_id):
         try:
             # Get a new access token using the refresh token
             new_token_info = sp_oauth.refresh_access_token(user.refresh_token)
-            
+
             # Since we got a new token, save the new refresh token if one was returned
             if 'refresh_token' in new_token_info:
                 user.refresh_token = new_token_info['refresh_token']
@@ -94,7 +92,7 @@ def run_sync_job(tracked_playlist_db_id):
 
             disliked_songs = db.session.execute(db.select(DislikedSong).where(DislikedSong.tracked_playlist_id == tracked_playlist.id)).scalars().all()
             disliked_uris_db = {song.song_uri for song in disliked_songs}
-            
+
             songs_to_add = list(source_uris - tracked_uris - disliked_uris_db)
 
             if songs_to_add:
@@ -124,7 +122,7 @@ def login():
 @app.route('/callback')
 def callback():
     token_info = sp_oauth.get_access_token(request.args['code'])
-    
+
     # Save the refresh token to the database
     sp = spotipy.Spotify(auth=token_info['access_token'])
     user_info = sp.current_user()
@@ -132,7 +130,7 @@ def callback():
     if not user:
         user = User(id=user_info['id'])
         db.session.add(user)
-    
+
     user.refresh_token = token_info['refresh_token']
     db.session.commit()
 
@@ -148,15 +146,15 @@ def logout():
 def profile():
     token = get_auth_token()
     if not token: return redirect(url_for('login'))
-    
+
     sp = spotipy.Spotify(auth=token)
     user_info = sp.current_user()
-    
+
     all_user_playlists_response = sp.current_user_playlists(limit=50)
     all_user_playlists = all_user_playlists_response['items']
-    
+
     spotify_playlists_by_id = {p['id']: p for p in all_user_playlists}
-    
+
     tracked_playlists_from_db = db.session.execute(
         db.select(TrackedPlaylist).where(TrackedPlaylist.user_id == user_info['id'])
     ).scalars().all()
@@ -213,8 +211,8 @@ def profile():
                 logging.error(f"Could not fetch source playlist {playlist_id}: {e}")
 
     return render_template(
-        'profile.html', 
-        user=user_info, 
+        'profile.html',
+        user=user_info,
         tracked_playlists=valid_tracked_playlists,
         all_user_playlists=all_user_playlists,
         source_playlists=source_playlists,
@@ -258,17 +256,17 @@ def track():
         source_playlist = spotify_client.get_playlist_details(token, source_playlist_id)
         source_playlist_name = source_playlist['name']
         track_uris = spotify_client.get_all_track_uris(token, source_playlist)
-        
+
         if custom_name:
             new_playlist_name = custom_name
         else:
             new_playlist_name = f"{source_playlist_name} (Trackify)"
-        
+
         description = f"Tracked version of '{source_playlist_name}'. Created by Trackify."
         new_playlist_id = spotify_client.create_new_playlist(token, user_id, new_playlist_name, description)
         if track_uris:
             spotify_client.add_tracks_to_playlist(token, new_playlist_id, track_uris)
-        
+
         new_tracked_playlist = TrackedPlaylist(
             user_id=user_id,
             source_playlist_id=source_playlist_id,
@@ -278,7 +276,7 @@ def track():
         )
         db.session.add(new_tracked_playlist)
         db.session.commit()
-        
+
         flash(f"Successfully created and tracked '{new_playlist_name}'!", 'success')
 
     except requests.exceptions.HTTPError as e:
@@ -303,7 +301,7 @@ def sync(tracked_playlist_db_id):
     if tracked_playlist.user_id != user_info.get('id'):
         flash("You do not have permission to sync this playlist.", 'error')
         return redirect(url_for('profile'))
-        
+
     try:
         source_data = spotify_client.get_playlist_details(token, tracked_playlist.source_playlist_id)
         source_uris = set(spotify_client.get_all_track_uris(token, source_data))
@@ -361,7 +359,6 @@ def toggle_auto_sync(tracked_playlist_db_id):
             replace_existing=True
         )
         tracked_playlist.job_id = job.id
-        # flash(f"Automatic weekly sync ENABLED for '{tracked_playlist.tracked_playlist_name}'.", "success")
     else:
         if tracked_playlist.job_id:
             try:
@@ -369,7 +366,6 @@ def toggle_auto_sync(tracked_playlist_db_id):
             except Exception as e:
                 logging.warning(f"Could not remove job {tracked_playlist.job_id}: {e}")
         tracked_playlist.job_id = None
-        # flash(f"Automatic sync DISABLED for '{tracked_playlist.tracked_playlist_name}'.", "info")
 
     db.session.commit()
     return redirect(url_for('profile'))
@@ -382,20 +378,20 @@ def untrack(tracked_playlist_db_id):
     if not playlist_to_untrack:
         flash("Playlist not found in tracking database.", 'error')
         return redirect(url_for('profile'))
-    
+
     if playlist_to_untrack.job_id:
         try:
             scheduler.remove_job(playlist_to_untrack.job_id)
         except Exception as e:
             logging.warning(f"Could not remove job {playlist_to_untrack.job_id} during untrack: {e}")
-    
+
     session['undo_data'] = {
         'user_id': playlist_to_untrack.user_id,
         'source_playlist_id': playlist_to_untrack.source_playlist_id,
         'tracked_playlist_id': playlist_to_untrack.tracked_playlist_id,
         'tracked_playlist_name': playlist_to_untrack.tracked_playlist_name,
     }
-    
+
     db.session.execute(db.delete(DislikedSong).where(DislikedSong.tracked_playlist_id == playlist_to_untrack.id))
     db.session.delete(playlist_to_untrack)
     db.session.commit()
@@ -413,7 +409,7 @@ def undo_untrack():
     if not undo_data:
         flash("No untrack action to undo.", 'error')
         return redirect(url_for('profile'))
-    
+
     restored_playlist = TrackedPlaylist(
         user_id=undo_data['user_id'],
         source_playlist_id=undo_data['source_playlist_id'],
@@ -466,9 +462,9 @@ def delete_playlist(tracked_playlist_db_id):
 def edit_playlist(tracked_playlist_db_id):
     token = get_auth_token()
     if not token: return redirect(url_for('login'))
-    
+
     sp = spotipy.Spotify(auth=token)
-    
+
     tracked_playlist = db.session.get(TrackedPlaylist, tracked_playlist_db_id)
     if not tracked_playlist:
         flash("Playlist not found in tracking database.", 'error')
@@ -477,7 +473,7 @@ def edit_playlist(tracked_playlist_db_id):
     try:
         playlist_data = sp.playlist(tracked_playlist.tracked_playlist_id)
         playlist_data['db_id'] = tracked_playlist_db_id
-        
+
     except Exception as e:
         flash(f"Could not load playlist from Spotify: {e}", 'error')
         return redirect(url_for('profile'))
@@ -515,7 +511,7 @@ def dislike_song(tracked_playlist_db_id, track_uri):
         track_info = sp.track(track_uri.split(':')[-1])
         track_name = track_info['name']
         sp.playlist_remove_all_occurrences_of_items(tracked_playlist.tracked_playlist_id, [track_uri])
-        
+
         flash(f"Successfully removed '{track_name}' and will prevent it from being added back.", "success")
 
     except Exception as e:
@@ -523,7 +519,7 @@ def dislike_song(tracked_playlist_db_id, track_uri):
 
     return redirect(url_for('edit_playlist', tracked_playlist_db_id=tracked_playlist_db_id))
 
-# This block creates the database file and tables if they don't exist
+# Create the database file and tables if they don't exist
 with app.app_context():
     db.create_all()
 
