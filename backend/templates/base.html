@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Trackify{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { colors: { 'spotify-green': '#1DB954', 'spotify-green-darker': '#1ED760', 'spotify-dark': '#121212', 'spotify-light-dark': '#181818', 'spotify-gray': '#282828' } } } }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111118; background-image: radial-gradient(circle at top, #3a3a5c 0%, #111118 40%); background-repeat: no-repeat; }
+        .glass-card { background: rgba(30, 30, 40, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 1rem; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #181818; } ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: #777; }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+
+    {% block content %}
+    {% endblock %}
+
+</body>
+</html>
