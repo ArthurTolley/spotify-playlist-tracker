@@ -38,17 +38,53 @@
             </a>
         </header>
 
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-4 space-y-4">
+                {% for category, message in messages %}
+                    <div class="{% if category == 'error' %}bg-red-500{% else %}bg-green-500{% endif %} text-white font-bold rounded-lg p-4" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- API Info Banner -->
+        <div class="bg-sky-800 border-t-4 border-sky-500 rounded-b text-sky-100 px-4 py-3 shadow-md mb-8" role="alert">
+            <div class="flex">
+                <div class="py-1"><svg class="fill-current h-6 w-6 text-sky-400 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zM9 11v4h2v-4H9zm1-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>
+                <div>
+                    <p class="font-bold">INFO: Users can no longer track Spotify curated playlists.</p>
+                    <p class="text-sm">Due to recent Spotify API changes, tracking official playlists (like Top 100s or POLLEN) is not possible. Please use public, user-created playlists instead.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <main>
             <!-- Track New Playlist Section -->
             <div class="bg-gray-800 bg-opacity-80 backdrop-blur-sm rounded-2xl shadow-2xl p-6 mb-8">
                 <h2 class="text-2xl font-bold mb-4">Track a New Playlist</h2>
-                <form action="#" method="POST" class="flex flex-col md:flex-row gap-4">
-                    <input type="text" name="playlist_url" placeholder="Paste Spotify Playlist URL or ID" class="flex-grow bg-gray-700 text-white placeholder-gray-400 border-2 border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#1DB954] focus:border-transparent">
+                <form action="{{ url_for('track') }}" method="POST" class="flex flex-col md:flex-row gap-4">
+                    <input type="text" id="playlist-url-input" name="playlist_url" placeholder="Paste user-created Spotify Playlist URL or ID" class="flex-grow bg-gray-700 text-white placeholder-gray-400 border-2 border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#1DB954] focus:border-transparent" required>
                     <button type="submit" class="bg-[#1DB954] hover:bg-[#1ED760] text-white font-bold py-3 px-6 rounded-lg transition duration-300 transform hover:scale-105">
                         Track Playlist
                     </button>
                 </form>
+            </div>
+
+            <!-- Suggestion Box -->
+            <div class="bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8">
+                <h3 class="font-bold text-lg text-gray-200 mb-2">Looking for a chart playlist?</h3>
+                <p class="text-gray-400 mb-4">Try tracking this user-created version of the BBC Radio 1 UK Top 40:</p>
+                <div class="flex flex-col md:flex-row gap-4 items-center bg-gray-900 p-3 rounded-lg">
+                    <input id="copy-link-input" type="text" class="bg-transparent text-gray-300 w-full flex-grow focus:outline-none" value="https://open.spotify.com/playlist/4OIVU71yO7SzyGrh0ils2i" readonly>
+                    <button id="copy-link-button" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 w-full md:w-auto">
+                        Copy Link
+                    </button>
+                </div>
             </div>
 
             <!-- User's Playlists Section -->
@@ -79,5 +115,38 @@
             </div>
         </main>
     </div>
+
+    <script>
+        // JavaScript for the copy button
+        const copyButton = document.getElementById('copy-link-button');
+        const copyInput = document.getElementById('copy-link-input');
+
+        copyButton.addEventListener('click', () => {
+            // Select the text
+            copyInput.select();
+            copyInput.setSelectionRange(0, 99999); // For mobile devices
+
+            try {
+                // Use the modern clipboard API if available
+                navigator.clipboard.writeText(copyInput.value);
+            } catch (err) {
+                // Fallback for older browsers
+                document.execCommand('copy');
+            }
+
+            // Provide user feedback
+            const originalText = copyButton.innerText;
+            copyButton.innerText = 'Copied!';
+            copyButton.classList.add('bg-green-600');
+            copyButton.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+
+            setTimeout(() => {
+                copyButton.innerText = originalText;
+                copyButton.classList.remove('bg-green-600');
+                copyButton.classList.add('bg-gray-600', 'hover:bg-gray-500');
+            }, 2000);
+        });
+    </script>
+
 </body>
 </html>
