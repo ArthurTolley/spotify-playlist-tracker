@@ -1,7 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import String, ForeignKey, DateTime
 from typing import List
+from datetime import datetime # <-- 1. ADD THIS IMPORT
 
 # --- Database Setup ---
 # This setup allows us to define our models in a separate file.
@@ -20,6 +21,7 @@ class User(db.Model):
 
     # The user's Spotify ID will be our primary key
     id: Mapped[str] = mapped_column(String, primary_key=True)
+    refresh_token: Mapped[str | None] = mapped_column(String) # <-- ADD THIS
 
     # Establishes a one-to-many relationship with TrackedPlaylist
     # A user can have many tracked playlists.
@@ -40,6 +42,12 @@ class TrackedPlaylist(db.Model):
     # The name of the playlist we created
     tracked_playlist_name: Mapped[str] = mapped_column(String, nullable=False)
 
+    # The timestamp of the last successful sync
+    last_synced: Mapped[datetime | None] = mapped_column(nullable=True)
+
+    auto_sync_enabled: Mapped[bool] = mapped_column(default=False)
+    job_id: Mapped[str | None] = mapped_column(String)
+
     # Foreign key to link back to the user who owns this tracked playlist
     user_id: Mapped[str] = mapped_column(ForeignKey("user.id"))
 
@@ -47,7 +55,7 @@ class TrackedPlaylist(db.Model):
     user: Mapped["User"] = relationship(back_populates="tracked_playlists")
 
     # A tracked playlist can have many disliked songs
-    disliked_songs: Mapped[List["DislikedSong"]] = relationship()
+    disliked_songs: Mapped[List["DislikedSong"]] = relationship(cascade="all, delete-orphan")
 
 class DislikedSong(db.Model):
     """Represents a song a user has removed from a tracked playlist."""
@@ -60,4 +68,3 @@ class DislikedSong(db.Model):
 
     # Foreign key to link back to the specific tracked playlist
     tracked_playlist_id: Mapped[int] = mapped_column(ForeignKey("tracked_playlist.id"))
-
