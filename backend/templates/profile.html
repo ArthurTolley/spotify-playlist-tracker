@@ -21,7 +21,18 @@
 <body class="bg-pattern text-white min-h-screen">
 
     <div class="container mx-auto p-4 md:p-8">
-        
+
+        <!-- API Info Banner -->
+        <div class="bg-sky-800 border-t-4 border-sky-500 rounded-b text-sky-100 px-4 py-3 shadow-md mb-8" role="alert">
+            <div class="flex">
+                <div class="py-1"><svg class="fill-current h-6 w-6 text-sky-400 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zM9 11v4h2v-4H9zm1-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>
+                <div>
+                    <p class="font-bold">INFO: Users can no longer track Spotify created playlists.</p>
+                    <!-- <p class="text-sm">Spotify API changes have preventing the tracking of official playlists (like Top 100s or POLLEN). Use other public, user-created playlists instead.</p> -->
+                </div>
+            </div>
+        </div>
+
         <!-- Header with User Info and Logout -->
         <header class="flex items-center justify-between mb-8">
             <div class="flex items-center gap-4">
@@ -30,7 +41,7 @@
                 {% endif %}
                 <div>
                     <h1 class="text-2xl md:text-3xl font-bold">Welcome, {{ user.display_name }}!</h1>
-                    <p class="text-gray-400">Here are your Spotify playlists.</p>
+                    <p class="text-gray-400">Manage your tracked playlists below.</p>
                 </div>
             </div>
             <a href="{{ url_for('logout') }}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
@@ -43,24 +54,13 @@
             {% if messages %}
                 <div class="mb-4 space-y-4">
                 {% for category, message in messages %}
-                    <div class="{% if category == 'error' %}bg-red-500{% else %}bg-green-500{% endif %} text-white font-bold rounded-lg p-4" role="alert">
-                        {{ message }}
+                    <div class="{% if category == 'error' %}bg-red-500{% elif category == 'success' %}bg-green-600{% else %}bg-sky-800{% endif %} text-white font-bold rounded-lg p-4" role="alert">
+                        {{ message|safe }}
                     </div>
                 {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
-
-        <!-- API Info Banner -->
-        <div class="bg-sky-800 border-t-4 border-sky-500 rounded-b text-sky-100 px-4 py-3 shadow-md mb-8" role="alert">
-            <div class="flex">
-                <div class="py-1"><svg class="fill-current h-6 w-6 text-sky-400 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zM9 11v4h2v-4H9zm1-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>
-                <div>
-                    <p class="font-bold">INFO: Users can no longer track Spotify curated playlists.</p>
-                    <p class="text-sm">Due to recent Spotify API changes, tracking official playlists (like Top 100s or POLLEN) is not possible. Please use public, user-created playlists instead.</p>
-                </div>
-            </div>
-        </div>
 
         <!-- Main Content -->
         <main>
@@ -77,22 +77,60 @@
 
             <!-- Suggestion Box -->
             <div class="bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8">
-                <h3 class="font-bold text-lg text-gray-200 mb-2">Looking for a chart playlist?</h3>
-                <p class="text-gray-400 mb-4">Try tracking this user-created version of the BBC Radio 1 UK Top 40:</p>
+                <p class="text-gray-400 mb-4">Try tracking the BBC Radio 1 UK Top 40:</p>
                 <div class="flex flex-col md:flex-row gap-4 items-center bg-gray-900 p-3 rounded-lg">
                     <input id="copy-link-input" type="text" class="bg-transparent text-gray-300 w-full flex-grow focus:outline-none" value="https://open.spotify.com/playlist/4OIVU71yO7SzyGrh0ils2i" readonly>
-                    <button id="copy-link-button" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 w-full md:w-auto">
+                    <button id="copy-link-button" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 w-full md:w-auto flex-shrink-0">
                         Copy Link
                     </button>
                 </div>
             </div>
 
+            <!-- Tracked Playlists Section -->
+            <div class="mb-12">
+                <h2 class="text-2xl font-bold mb-4">Your Tracked Playlists</h2>
+                <div class="space-y-4">
+                    {% for tp in tracked_playlists %}
+                        <div class="bg-gray-800 bg-opacity-60 rounded-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div class="flex-grow">
+                                <h3 class="font-bold text-lg">{{ tp.tracked_playlist_name }}</h3>
+                                <p class="text-sm text-gray-400">Tracking playlist ID: <a href="https://open.spotify.com/playlist/{{ tp.source_playlist_id }}" target="_blank" class="hover:underline">{{ tp.source_playlist_id }}</a></p>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap justify-end flex-shrink-0">
+                                <form action="{{ url_for('sync', tracked_playlist_db_id=tp.id) }}" method="POST">
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 w-full">
+                                        Sync Now
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('untrack', tracked_playlist_db_id=tp.id) }}" method="POST">
+                                    <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 w-full">
+                                        Untrack
+                                    </button>
+                                </form>
+                                <!-- Delete Button triggers the modal -->
+                                <button type="button" class="delete-button bg-red-800 hover:bg-red-900 text-white font-bold py-2 px-6 rounded-lg transition duration-300 w-full"
+                                        data-playlist-name="{{ tp.tracked_playlist_name }}"
+                                        data-form-id="delete-form-{{ tp.id }}">
+                                    Delete
+                                </button>
+                                <!-- Hidden form for the delete action -->
+                                <form id="delete-form-{{ tp.id }}" action="{{ url_for('delete_playlist', tracked_playlist_db_id=tp.id) }}" method="POST" class="hidden"></form>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="bg-gray-800 bg-opacity-60 rounded-lg p-6 text-center">
+                            <p class="text-gray-400">You are not tracking any playlists yet. Use the form above to start!</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
             <!-- User's Playlists Section -->
             <div>
-                <h2 class="text-2xl font-bold mb-4">Your Playlists</h2>
+                <h2 class="text-2xl font-bold mb-4">All Your Spotify Playlists</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {% for playlist in playlists %}
-                        <a href="{{ url_for('playlist_detail', playlist_id=playlist.id) }}" class="block bg-gray-800 bg-opacity-60 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl hover:scale-105 transform transition-all duration-300">
+                        <a href="https://open.spotify.com/playlist/{{ playlist.id }}" target="_blank" class="block bg-gray-800 bg-opacity-60 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl hover:scale-105 transform transition-all duration-300">
                             <div class="relative">
                                 {% if playlist.images %}
                                     <img src="{{ playlist.images[0].url }}" alt="Playlist Cover" class="w-full h-48 object-cover">
@@ -109,11 +147,29 @@
                             </div>
                         </a>
                     {% else %}
-                        <p class="text-gray-400 col-span-full">You don't have any playlists yet.</p>
+                        <p class="text-gray-400 col-span-full">Could not load your playlists from Spotify.</p>
                     {% endfor %}
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-sm w-full mx-4">
+            <h2 class="text-2xl font-bold mb-4">Are you sure?</h2>
+            <p class="text-gray-300 mb-6">
+                This will permanently delete the playlist "<span id="modal-playlist-name" class="font-bold"></span>" from your Spotify account and untrack it here. This action cannot be undone.
+            </p>
+            <div class="flex justify-end gap-4">
+                <button id="cancel-delete" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Cancel
+                </button>
+                <button id="confirm-delete" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Confirm Delete
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -122,29 +178,52 @@
         const copyInput = document.getElementById('copy-link-input');
 
         copyButton.addEventListener('click', () => {
-            // Select the text
             copyInput.select();
-            copyInput.setSelectionRange(0, 99999); // For mobile devices
-
+            copyInput.setSelectionRange(0, 99999);
             try {
-                // Use the modern clipboard API if available
                 navigator.clipboard.writeText(copyInput.value);
             } catch (err) {
-                // Fallback for older browsers
                 document.execCommand('copy');
             }
-
-            // Provide user feedback
             const originalText = copyButton.innerText;
             copyButton.innerText = 'Copied!';
             copyButton.classList.add('bg-green-600');
             copyButton.classList.remove('bg-gray-600', 'hover:bg-gray-500');
-
             setTimeout(() => {
                 copyButton.innerText = originalText;
                 copyButton.classList.remove('bg-green-600');
                 copyButton.classList.add('bg-gray-600', 'hover:bg-gray-500');
             }, 2000);
+        });
+
+        // JavaScript for the delete confirmation modal
+        const deleteModal = document.getElementById('delete-modal');
+        const modalPlaylistName = document.getElementById('modal-playlist-name');
+        const cancelDeleteButton = document.getElementById('cancel-delete');
+        const confirmDeleteButton = document.getElementById('confirm-delete');
+        const deleteButtons = document.querySelectorAll('.delete-button');
+        let formToSubmit = null;
+
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const playlistName = button.dataset.playlistName;
+                const formId = button.dataset.formId;
+                formToSubmit = document.getElementById(formId);
+                
+                modalPlaylistName.textContent = playlistName;
+                deleteModal.classList.remove('hidden');
+            });
+        });
+
+        cancelDeleteButton.addEventListener('click', () => {
+            deleteModal.classList.add('hidden');
+            formToSubmit = null;
+        });
+
+        confirmDeleteButton.addEventListener('click', () => {
+            if (formToSubmit) {
+                formToSubmit.submit();
+            }
         });
     </script>
 
