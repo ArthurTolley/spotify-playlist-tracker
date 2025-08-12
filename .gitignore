@@ -89,3 +89,6 @@ secrets.toml
 # SQLite
 *.sqlite3
 *.db
+
+# Other
+.envrc

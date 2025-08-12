@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from flask_apscheduler import APScheduler
 import spotify_client
-from models import db, User, TrackedPlaylist, DislikedSong
+from models import db, User, TrackedPlaylist, DislikedSong, SyncedTrack
 
 # --- Basic Configuration ---
 load_dotenv()
@@ -284,6 +284,15 @@ def track():
         db.session.add(new_tracked_playlist)
         db.session.commit()
 
+        if track_uris:
+            for uri in track_uris:
+                snapshot_track = SyncedTrack(
+                    track_uri=uri,
+                    tracked_playlist_id=new_tracked_playlist.id
+                )
+                db.session.add(snapshot_track)
+            db.session.commit()
+
         flash(f"Successfully created and tracked '{new_playlist_name}'!", 'success')
 
     except requests.exceptions.HTTPError as e:
@@ -311,24 +320,46 @@ def sync(tracked_playlist_db_id):
         return redirect(url_for('profile'))
 
     try:
+        # --- STEP 1: Get all current states ---
+        # Get songs from the original source playlist on Spotify
         source_data = spotify_client.get_playlist_details(token, tracked_playlist.source_playlist_id)
         source_uris = set(spotify_client.get_all_track_uris(token, source_data))
+
+        # Get songs currently in the user's tracked playlist on Spotify
         tracked_data = spotify_client.get_playlist_details(token, tracked_playlist.tracked_playlist_id)
-        tracked_uris = set(spotify_client.get_all_track_uris(token, tracked_data))
-        disliked_songs = db.session.execute(db.select(DislikedSong).where(DislikedSong.tracked_playlist_id == tracked_playlist.id)).scalars().all()
-        disliked_uris_db = {song.song_uri for song in disliked_songs}
-        potential_disliked = source_uris - tracked_uris
-        newly_disliked_to_save = potential_disliked - disliked_uris_db
+        current_tracked_uris = set(spotify_client.get_all_track_uris(token, tracked_data))
 
-        if newly_disliked_to_save:
-            for uri in newly_disliked_to_save:
-                disliked_song = DislikedSong(song_uri=uri, tracked_playlist_id=tracked_playlist.id)
-                db.session.add(disliked_song)
-            db.session.commit()
-            logging.info(f"Recorded {len(newly_disliked_to_save)} newly disliked songs.")
-            disliked_uris_db.update(newly_disliked_to_save)
+        # Get the snapshot of tracks from our DB from the LAST successful sync
+        previous_synced_tracks = db.session.execute(
+            db.select(SyncedTrack).where(SyncedTrack.tracked_playlist_id == tracked_playlist.id)
+        ).scalars().all()
+        previous_synced_uris = {t.track_uri for t in previous_synced_tracks}
 
-        songs_to_add = list(source_uris - tracked_uris - disliked_uris_db)
+        # Get all songs the user has ever disliked for this playlist
+        disliked_songs_db = db.session.execute(
+            db.select(DislikedSong).where(DislikedSong.tracked_playlist_id == tracked_playlist.id)
+        ).scalars().all()
+        disliked_uris = {s.song_uri for s in disliked_songs_db}
+
+        # --- STEP 2: Find songs the user manually removed (the new "disliked" songs) ---
+        # A song was removed by the user if it was in our last snapshot, but is NOT in the playlist now.
+        newly_disliked_uris = previous_synced_uris - current_tracked_uris
+        
+        if newly_disliked_uris:
+            for uri in newly_disliked_uris:
+                # Add to disliked table only if it's not already there
+                if uri not in disliked_uris:
+                    disliked_song = DislikedSong(song_uri=uri, tracked_playlist_id=tracked_playlist.id)
+                    db.session.add(disliked_song)
+            
+            # Update our in-memory set of disliked songs for the next step
+            disliked_uris.update(newly_disliked_uris)
+            logging.info(f"Recorded {len(newly_disliked_uris)} newly disliked songs.")
+
+        # --- STEP 3: Find new songs to add to the tracked playlist ---
+        # A song should be added if it's in the source, not already in the tracked playlist, 
+        # AND not in our master list of disliked songs.
+        songs_to_add = list(source_uris - current_tracked_uris - disliked_uris)
 
         if songs_to_add:
             spotify_client.add_tracks_to_playlist(token, tracked_playlist.tracked_playlist_id, songs_to_add)
@@ -336,13 +367,28 @@ def sync(tracked_playlist_db_id):
         else:
             flash("Sync complete! Your playlist is up to date.", 'success')
 
+        # --- STEP 4: Update the DB snapshot to the new state ---
+        # The new "correct" state is what's currently on Spotify plus the songs we just added.
+        new_snapshot_uris = current_tracked_uris.union(songs_to_add)
+        
+        # Delete the old snapshot
+        db.session.execute(db.delete(SyncedTrack).where(SyncedTrack.tracked_playlist_id == tracked_playlist.id))
+        
+        # Save the new snapshot
+        for uri in new_snapshot_uris:
+            db.session.add(SyncedTrack(track_uri=uri, tracked_playlist_id=tracked_playlist.id))
+
+        # Finally, update the sync timestamp and commit all changes
         tracked_playlist.last_synced = datetime.utcnow()
         db.session.commit()
 
     except requests.exceptions.HTTPError as e:
+        db.session.rollback() # Rollback DB changes on error
         flash(f"A Spotify API error occurred during sync: {e.response.status_code} - {e.response.text}", 'error')
     except Exception as e:
+        db.session.rollback()
         flash(f"An unexpected error occurred during sync: {e}", 'error')
+        logging.error(f"Sync error for playlist {tracked_playlist_db_id}: {e}", exc_info=True)
 
     return redirect(url_for('profile'))
 

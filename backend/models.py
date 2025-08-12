@@ -68,3 +68,13 @@ class DislikedSong(db.Model):
 
     # Foreign key to link back to the specific tracked playlist
     tracked_playlist_id: Mapped[int] = mapped_column(ForeignKey("tracked_playlist.id"))
+
+class SyncedTrack(db.Model):
+    """Stores a snapshot of track URIs for a playlist at the last successful sync."""
+    __tablename__ = 'synced_track'
+    id = db.Column(db.Integer, primary_key=True)
+    track_uri = db.Column(db.String, nullable=False)
+    tracked_playlist_id = db.Column(db.Integer, db.ForeignKey('tracked_playlist.id'), nullable=False, index=True)
+
+    def __repr__(self):
+        return f'<SyncedTrack {self.track_uri} for playlist {self.tracked_playlist_id}>'
