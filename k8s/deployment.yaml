@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spotify-tracker-backend
+  namespace: spotify-tracker
+  labels:
+    app: spotify-tracker
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: spotify-tracker
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: spotify-tracker
+        component: backend
+    spec:
+      containers:
+      - name: backend
+        # GitHub Container Registry image - auto-built by GitHub Actions
+        # Format: ghcr.io/OWNER/REPO-backend:latest
+        # Update OWNER with your GitHub username (e.g., ghcr.io/arthurtolley/spotify-playlist-tracker-backend:latest)
+        image: ghcr.io/arthurtolley/spotify-playlist-tracker-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8888
+          name: http
+          protocol: TCP
+        env:
+        # Environment variables from ConfigMap
+        - name: SPOTIPY_REDIRECT_URI
+          valueFrom:
+            configMapKeyRef:
+              name: spotify-tracker-config
+              key: SPOTIPY_REDIRECT_URI
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: spotify-tracker-config
+              key: CORS_ORIGINS
+        - name: FLASK_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: spotify-tracker-config
+              key: FLASK_ENV
+        # Sensitive environment variables from Secret
+        - name: SPOTIPY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: spotify-tracker-secrets
+              key: SPOTIPY_CLIENT_ID
+        - name: SPOTIPY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: spotify-tracker-secrets
+              key: SPOTIPY_CLIENT_SECRET
+        - name: FLASK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: spotify-tracker-secrets
+              key: FLASK_SECRET_KEY
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: spotify-tracker-secrets
+              key: DATABASE_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8888
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8888
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3

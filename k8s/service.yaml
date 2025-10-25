@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spotify-tracker-backend
+  namespace: spotify-tracker
+  labels:
+    app: spotify-tracker
+    component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: spotify-tracker
+    component: backend
+  ports:
+  - name: http
+    port: 8888
+    targetPort: 8888
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800

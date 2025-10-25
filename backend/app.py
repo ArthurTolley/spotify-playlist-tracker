@@ -3,6 +3,7 @@ import re
 import requests
 import logging
 from flask import Flask, session, request, redirect, url_for, render_template, flash
+from flask_cors import CORS
 from markupsafe import Markup
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -19,6 +20,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # --- Flask App Initialization ---
 app = Flask(__name__, template_folder='templates')
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
+# --- CORS Configuration ---
+# Allow requests from GitHub Pages frontend
+cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+CORS(app, origins=cors_origins, supports_credentials=True)
 
 # --- Database Configuration ---
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///trackify.db")
@@ -145,7 +151,7 @@ def callback():
 def logout():
     session.clear()
     flash("You have been successfully logged out.")
-    return '<h1>Logged out!</h1><p>You can now close this tab or <a href="http://localhost:8888/login">log in again</a>.</p>'
+    return '<h1>Logged out!</h1><p>You can now close this tab or <a href="http://127.0.0.1:8888/login">log in again</a>.</p>'
 
 @app.route('/profile')
 def profile():

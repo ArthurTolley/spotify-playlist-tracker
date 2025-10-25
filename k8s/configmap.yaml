@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spotify-tracker-config
+  namespace: spotify-tracker
+data:
+  # Spotify OAuth redirect URI - production domain via Cloudflare tunnel
+  SPOTIPY_REDIRECT_URI: "https://spotify-tracker-api.icg-pi-cluster.click/callback"
+  
+  # CORS origins - GitHub Pages URL
+  CORS_ORIGINS: "https://arthurtolley.github.io,https://spotify-tracker-api.icg-pi-cluster.click"
+  
+  # Flask environment
+  FLASK_ENV: "production"

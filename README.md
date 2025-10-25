@@ -1,10 +1,6 @@
 # Spotify Playlist Tracker
 
 <p align="center">
-  <img src="<temp>" alt="Spotify Playlist Tracker Banner" width="600"/>
-</p>
-
-<p align="center">
   <strong>Keep the hits, lose the misses.</strong>
 </p>
 
@@ -19,8 +15,26 @@ This web application helps you manage and filter your favorite Spotify playlists
 * **Dislike Memory:** Songs you remove from your tracked playlist are permanently remembered and ignored in future syncs.
 * **Automated Weekly Syncs:** Set your playlists to update automatically every week.
 * **Web-Based UI:** Manage your playlists through a simple, clean, and modern web interface.
+* **Production Ready:** Deployed on Kubernetes with PostgreSQL and Cloudflare Tunnel.
 
-## 🚀 Getting Started
+## 🌐 Deployment Options
+
+### Option 1: Production Deployment (Kubernetes + GitHub Pages)
+
+**Frontend**: GitHub Pages (static landing page)  
+**Backend**: Kubernetes cluster with Cloudflare Tunnel  
+**Database**: PostgreSQL on Kubernetes  
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete deployment guide.
+
+Quick links:
+- [Kubernetes Setup](k8s/README.md)
+- [Cloudflare Tunnel Setup](k8s/CLOUDFLARE_TUNNEL.md)
+- [Frontend Deployment](frontend/README.md)
+
+### Option 2: Local Development
+
+Perfect for testing and development.
 
 ### Prerequisites
 
@@ -78,11 +92,13 @@ This web application helps you manage and filter your favorite Spotify playlists
 
 ## 🛠️ Technology Stack
 
-* **Backend:** Python, Flask
+* **Backend:** Python, Flask, Gunicorn
+* **Frontend:** HTML, Tailwind CSS, GitHub Pages
 * **Spotify API Wrapper:** Spotipy
-* **Database:** SQLAlchemy with SQLite
+* **Database:** PostgreSQL (production) / SQLite (development)
 * **Scheduled Jobs:** APScheduler for automated weekly syncs
-* **Frontend:** HTML, Tailwind CSS
+* **Deployment:** Docker, Kubernetes, Cloudflare Tunnel
+* **CI/CD:** GitHub Actions
 
 ## 🤝 Contributing
 

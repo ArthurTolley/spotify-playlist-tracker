@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Playlist Tracker - Keep the hits, lose the misses</title>
+    <meta name="description" content="Track and filter your favorite Spotify playlists. Create personal copies, sync automatically, and never see unwanted songs again.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        'spotify-green': '#1DB954', 
+                        'spotify-green-darker': '#1ED760', 
+                        'spotify-dark': '#121212', 
+                        'spotify-light-dark': '#181818', 
+                        'spotify-gray': '#282828' 
+                    } 
+                } 
+            } 
+        }
+        // Configuration - Backend API URL via Cloudflare Tunnel
+        const API_BASE_URL = 'https://spotify-tracker-api.icg-pi-cluster.click';
+    </script>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #111118; 
+            background-image: radial-gradient(circle at top, #3a3a5c 0%, #111118 40%); 
+            background-repeat: no-repeat; 
+        }
+        .glass-card { 
+            background: rgba(30, 30, 40, 0.4); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px); 
+            border-radius: 1rem; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); 
+        }
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px 0 rgba(29, 185, 84, 0.2);
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+    <!-- Hero Section -->
+    <div class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-6xl mx-auto">
+            <!-- Main Card -->
+            <div class="glass-card p-8 md:p-12 text-center mb-12">
+                <h1 class="text-5xl md:text-7xl font-black text-white mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                    Spotify Playlist Tracker
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-300 mb-8">
+                    Keep the hits, lose the misses.
+                </p>
+                <p class="text-gray-400 mb-10 max-w-2xl mx-auto">
+                    Create filtered copies of your favorite Spotify playlists. Remove songs you don't like, 
+                    and they'll never come back - even when the original playlist updates.
+                </p>
+                <a href="#" id="loginBtn" class="inline-flex items-center justify-center bg-[#1DB954] hover:bg-[#1ED760] text-white font-bold py-4 px-8 rounded-full text-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg shadow-spotify-green/30">
+                    <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2.036c-5.512 0-9.964 4.452-9.964 9.964s4.452 9.964 9.964 9.964 9.964-4.452 9.964-9.964S17.512 2.036 12 2.036zm4.888 13.68c-.24.144-.552.18-.84.096-2.232-1.344-5.016-1.656-8.376-.912-.312.072-.624-.108-.696-.42-.072-.312.108-.624.42-.696 3.696-.816 6.816-.456 9.336 1.056.288.168.384.528.216.816zm1.032-2.256c-.288.192-.696.24-1.032.12-2.592-1.56-6.504-2.016-9.6-1.104-.384.108-.792-.12-.888-.504-.108-.384.12-.792.504-.888 3.48-1.008 7.776-.504 10.752 1.296.336.204.456.66.252 1.032zm.12-2.4c-.336.24-.816.3-1.224.156-3.024-1.824-7.968-2.328-11.232-1.272-.456.144-.936-.144-1.08-.6-.144-.456.144-.936.6-1.08 3.744-1.176 9.144-.624 12.624 1.512.408.24.552.768.312 1.176z"></path>
+                    </svg>
+                    Login with Spotify
+                </a>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="grid md:grid-cols-3 gap-6 mb-12">
+                <div class="glass-card p-6 feature-card">
+                    <div class="text-4xl mb-4">🎵</div>
+                    <h3 class="text-xl font-bold mb-2">Playlist Tracking</h3>
+                    <p class="text-gray-400">Create a personal, tracked copy of any public Spotify playlist.</p>
+                </div>
+                <div class="glass-card p-6 feature-card">
+                    <div class="text-4xl mb-4">🔄</div>
+                    <h3 class="text-xl font-bold mb-2">Smart Sync</h3>
+                    <p class="text-gray-400">Update your tracked playlist with new songs from the source with one click.</p>
+                </div>
+                <div class="glass-card p-6 feature-card">
+                    <div class="text-4xl mb-4">👎</div>
+                    <h3 class="text-xl font-bold mb-2">Dislike Memory</h3>
+                    <p class="text-gray-400">Songs you remove are permanently remembered and ignored in future syncs.</p>
+                </div>
+                <div class="glass-card p-6 feature-card">
+                    <div class="text-4xl mb-4">⏰</div>
+                    <h3 class="text-xl font-bold mb-2">Auto-Sync</h3>
+                    <p class="text-gray-400">Set your playlists to update automatically every week.</p>
+                </div>
+                <div class="glass-card p-6 feature-card">
+                    <div class="text-4xl mb-4">🌐</div>
+                    <h3 class="text-xl font-bold mb-2">Web-Based</h3>
+                    <p class="text-gray-400">Manage your playlists through a simple, clean web interface.</p>
+                </div>
+                <div class="glass-card p-6 feature-card">
+                    <div class="text-4xl mb-4">🔒</div>
+                    <h3 class="text-xl font-bold mb-2">Secure</h3>
+                    <p class="text-gray-400">Uses official Spotify OAuth. We never see your password.</p>
+                </div>
+            </div>
+
+            <!-- How It Works -->
+            <div class="glass-card p-8 md:p-12 mb-12">
+                <h2 class="text-3xl font-bold mb-8 text-center">How It Works</h2>
+                <div class="grid md:grid-cols-4 gap-6">
+                    <div class="text-center">
+                        <div class="bg-spotify-green rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4 text-black font-bold text-xl">1</div>
+                        <h4 class="font-semibold mb-2">Connect</h4>
+                        <p class="text-sm text-gray-400">Login with your Spotify account</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-spotify-green rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4 text-black font-bold text-xl">2</div>
+                        <h4 class="font-semibold mb-2">Track</h4>
+                        <p class="text-sm text-gray-400">Add playlists you want to filter</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-spotify-green rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4 text-black font-bold text-xl">3</div>
+                        <h4 class="font-semibold mb-2">Filter</h4>
+                        <p class="text-sm text-gray-400">Remove songs you don't like</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-spotify-green rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4 text-black font-bold text-xl">4</div>
+                        <h4 class="font-semibold mb-2">Enjoy</h4>
+                        <p class="text-sm text-gray-400">Auto-sync keeps it fresh</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="text-center text-gray-500 text-sm">
+                <p class="mb-2">Open Source Project</p>
+                <a href="https://github.com/ArthurTolley/spotify-playlist-tracker" target="_blank" class="text-spotify-green hover:text-spotify-green-darker transition">
+                    View on GitHub
+                </a>
+                <p class="mt-4 text-xs">Not affiliated with Spotify AB</p>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        // Redirect to backend login
+        document.getElementById('loginBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = API_BASE_URL + '/login';
+        });
+    </script>
+</body>
+</html>

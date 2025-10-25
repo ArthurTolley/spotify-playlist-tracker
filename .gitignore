@@ -86,9 +86,18 @@ Thumbs.db
 secrets.toml
 .htpasswd
 
+# Kubernetes secrets (if created locally)
+k8s/*secret*.yaml
+!k8s/secret.yaml.example
+k8s/cloudflared-credentials.json
+
 # SQLite
 *.sqlite3
 *.db
+instance/
+
+# Docker
+.dockerignore.local
 
 # Other
 .envrc
