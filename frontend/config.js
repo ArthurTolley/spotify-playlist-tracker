@@ -3,7 +3,7 @@
 
 const CONFIG = {
     // Backend API URL - Cloudflare tunnel domain
-    API_BASE_URL: 'https://spotify-tracker-api.icg-pi-cluster.click',
+    API_BASE_URL: 'https://spotify-tracker-api.4298756.xyz',
     
     // GitHub Pages URL
     FRONTEND_URL: 'https://arthurtolley.github.io/spotify-playlist-tracker',
