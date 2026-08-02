@@ -57,6 +57,9 @@ class TrackedPlaylist(db.Model):
     # A tracked playlist can have many disliked songs
     disliked_songs: Mapped[List["DislikedSong"]] = relationship(cascade="all, delete-orphan")
 
+    # A tracked playlist has a snapshot of its synced tracks from the last successful sync
+    synced_tracks: Mapped[List["SyncedTrack"]] = relationship(cascade="all, delete-orphan")
+
 class DislikedSong(db.Model):
     """Represents a song a user has removed from a tracked playlist."""
     __tablename__ = 'disliked_song'
@@ -72,9 +75,10 @@ class DislikedSong(db.Model):
 class SyncedTrack(db.Model):
     """Stores a snapshot of track URIs for a playlist at the last successful sync."""
     __tablename__ = 'synced_track'
-    id = db.Column(db.Integer, primary_key=True)
-    track_uri = db.Column(db.String, nullable=False)
-    tracked_playlist_id = db.Column(db.Integer, db.ForeignKey('tracked_playlist.id'), nullable=False, index=True)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    track_uri: Mapped[str] = mapped_column(String, nullable=False)
+    tracked_playlist_id: Mapped[int] = mapped_column(ForeignKey("tracked_playlist.id"), nullable=False, index=True)
 
     def __repr__(self):
         return f'<SyncedTrack {self.track_uri} for playlist {self.tracked_playlist_id}>'

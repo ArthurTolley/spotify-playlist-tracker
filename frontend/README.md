@@ -5,28 +5,22 @@ This directory contains the static frontend for the Spotify Playlist Tracker tha
 ## Structure
 
 - `index.html` - Landing page with features and login button
-- `config.js` - Configuration file for API endpoints
 
 ## Configuration
 
-Before deploying, update the following:
-
-### 1. Update `index.html`
-
-Find this line and replace with your actual Cloudflare tunnel URL:
-```javascript
-const API_BASE_URL = 'https://your-domain.com'; // Change this to your actual domain
-```
-
-### 2. Update `config.js`
+The API base URL is computed at runtime by `index.html`:
 
 ```javascript
-const CONFIG = {
-    API_BASE_URL: 'https://spotify-tracker.yourdomain.com',
-    FRONTEND_URL: 'https://yourusername.github.io/spotify-playlist-tracker',
-    // ...
-};
+// Configuration - Backend API URL (same origin when served locally; Cloudflare tunnel on GitHub Pages)
+const API_BASE_URL = window.location.hostname.endsWith('github.io')
+    ? 'https://spotify.4298756.xyz'
+    : window.location.origin;
 ```
+
+- When served via Docker Compose (frontend and backend on the same origin), `API_BASE_URL` resolves to `window.location.origin` — no configuration needed.
+- When hosted on GitHub Pages, the `window.location.hostname.endsWith('github.io')` conditional selects the Cloudflare tunnel URL.
+
+The inline `API_BASE_URL` conditional in `frontend/index.html` is the single source of truth for the backend API URL. To change the production (GitHub Pages) URL, edit that conditional in `frontend/index.html`.
 
 ## Deployment
 

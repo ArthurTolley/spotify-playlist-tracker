@@ -96,6 +96,9 @@ k8s/cloudflared-credentials.json
 *.db
 instance/
 
+# Postgres dumps (contain user data / refresh tokens)
+*.dump
+
 # Docker
 .dockerignore.local
 

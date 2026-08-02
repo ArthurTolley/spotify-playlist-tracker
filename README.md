@@ -15,7 +15,7 @@ This web application helps you manage and filter your favorite Spotify playlists
 * **Dislike Memory:** Songs you remove from your tracked playlist are permanently remembered and ignored in future syncs.
 * **Automated Weekly Syncs:** Set your playlists to update automatically every week.
 * **Web-Based UI:** Manage your playlists through a simple, clean, and modern web interface.
-* **Production Ready:** Deployed on Kubernetes with PostgreSQL and Cloudflare Tunnel.
+* **Runs anywhere:** single-command Docker Compose for local, Kubernetes for production.
 
 ## 🌐 Deployment Options
 
@@ -25,77 +25,77 @@ This web application helps you manage and filter your favorite Spotify playlists
 **Backend**: Kubernetes cluster with Cloudflare Tunnel  
 **Database**: PostgreSQL on Kubernetes  
 
-See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete deployment guide.
+See **[k8s/README.md](k8s/README.md)** for the complete deployment guide.
 
 Quick links:
 - [Kubernetes Setup](k8s/README.md)
-- [Cloudflare Tunnel Setup](k8s/CLOUDFLARE_TUNNEL.md)
+- [Cloudflare Tunnel Setup](k8s/README.md)
 - [Frontend Deployment](frontend/README.md)
 
-### Option 2: Local Development
+### Option 2: Local Development (Docker Compose)
 
-Perfect for testing and development.
+Perfect for testing and development. Runs the backend (Flask/Gunicorn + PostgreSQL), the database (Postgres 16 in the `db` service, auto-restored from `spotify_tracker.dump` on first boot), and the frontend (Nginx static site) in containers with a single command — no Python environment needed.
 
 ### Prerequisites
 
-* Python 3.8+
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine (no Python install required).
 * A [Spotify Developer](https://developer.spotify.com/dashboard/) account and API credentials (Client ID & Client Secret).
 * Git
+* A `spotify_tracker.dump` (pg_dump custom format) file at the repo root is required before the first `docker compose up`; the `db` service restores it automatically on first boot. If the db service fails to start, place the dump and run `docker compose down -v && docker compose up --build`.
+
+> **Note for Linux hosts:** the dump file may need `chmod 644 spotify_tracker.dump` so the postgres container can read it.
 
 ### Installation & Setup
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/spotify-playlist-tracker.git](https://github.com/your-username/spotify-playlist-tracker.git)
+    git clone https://github.com/your-username/spotify-playlist-tracker.git
     cd spotify-playlist-tracker
     ```
 
-2.  **Set up the Python Backend:**
+2.  **Configure environment variables:**
     ```bash
-    # Navigate to the backend directory
-    cd backend
-
-    # Create and activate a virtual environment
-    # On macOS/Linux:
-    python3 -m venv venv
-    source venv/bin/activate
-
-    # On Windows:
-    python -m venv venv
-    .\venv\Scripts\activate
-
-    # Install dependencies
-    pip install -r requirements.txt
+    cp .env.example .env
     ```
+    Open the `.env` file and fill in your Spotify API credentials:
+    ```
+    SPOTIPY_CLIENT_ID="YOUR_SPOTIFY_CLIENT_ID"
+    SPOTIPY_CLIENT_SECRET="YOUR_SPOTIFY_CLIENT_SECRET"
+    ```
+    (The redirect URI, CORS origins, and database URL are pre-configured for local Docker Compose runs — no need to change them.)
 
-3.  **Configure Environment Variables:**
-    * Create a `.env` file in the `backend/` directory by copying the example:
-        ```bash
-        cp .env.example .env
-        ```
-    * Open the `.env` file and add your Spotify API credentials. You also need to add your Redirect URI in your Spotify Developer Dashboard.
-        ```
-        SPOTIPY_CLIENT_ID="YOUR_SPOTIFY_CLIENT_ID"
-        SPOTIPY_CLIENT_SECRET="YOUR_SPOTIFY_CLIENT_SECRET"
-        SPOTIPY_REDIRECT_URI="[http://127.0.0.1:8888/callback](http://127.0.0.1:8888/callback)"
-        FLASK_SECRET_KEY="A_RANDOM_SECRET_KEY_FOR_SESSIONS"
-        ```
+3.  **Add the redirect URI to your Spotify app:**
+    In the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/), add `http://127.0.0.1:8888/callback` to your app's Redirect URIs.
 
 4.  **Run the application:**
     ```bash
-    # From the backend directory
-    flask run
+    docker compose up --build
+    # or: make run
     ```
 
-5.  **Access the Frontend:**
-    * Open `http://127.0.0.1:8888` in your web browser.
+5.  **Access the app:**
+    Open `http://127.0.0.1:8888` in your web browser.
+
+### Useful Commands
+
+* `make logs` — stream backend and frontend logs
+* `make stop` — stop the containers
+* `make down` — stop and remove the containers (your Postgres data persists in the `postgres-data` Docker volume; `docker compose down -v` wipes it and the `/data` secret, requiring re-login)
+* Verify the database was restored:
+  ```bash
+  docker compose exec db psql -U spotifytracker -d spotify_tracker -c '\dt'
+  ```
+* Re-restore from the dump (destructive — wipes the database):
+  ```bash
+  docker compose down -v && docker compose up --build
+  ```
 
 ## 🛠️ Technology Stack
 
 * **Backend:** Python, Flask, Gunicorn
 * **Frontend:** HTML, Tailwind CSS, GitHub Pages
 * **Spotify API Wrapper:** Spotipy
-* **Database:** PostgreSQL (production) / SQLite (development)
+* **Database:** PostgreSQL
 * **Scheduled Jobs:** APScheduler for automated weekly syncs
 * **Deployment:** Docker, Kubernetes, Cloudflare Tunnel
 * **CI/CD:** GitHub Actions
@@ -112,4 +112,4 @@ Contributions are welcome! Please feel free to open an issue or submit a pull re
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the [LICENSE](arthurtolley/spotify-playlist-tracker/spotify-playlist-tracker-ac49e65934a0de7d7a1a9cbff0ff584d6621d7e7/LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

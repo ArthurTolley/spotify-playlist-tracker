@@ -4,14 +4,15 @@ import requests
 import logging
 from flask import Flask, session, request, redirect, url_for, render_template, flash
 from flask_cors import CORS
-from markupsafe import Markup
+from flask_wtf import CSRFProtect
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_apscheduler import APScheduler
 import spotify_client
 from models import db, User, TrackedPlaylist, DislikedSong, SyncedTrack
+import service
 
 # --- Basic Configuration ---
 load_dotenv()
@@ -25,6 +26,9 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY")
 # Allow requests from GitHub Pages frontend
 cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
 CORS(app, origins=cors_origins, supports_credentials=True)
+CSRFProtect(app)
+# Session-based CSRF tokens should not expire while the session is alive
+app.config["WTF_CSRF_TIME_LIMIT"] = None
 
 # --- Database Configuration ---
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///trackify.db")
@@ -55,6 +59,8 @@ def get_auth_token():
 
 def parse_playlist_id(url_or_uri):
     """Parses a Spotify URL, URI, or ID to extract just the playlist ID."""
+    if not url_or_uri:
+        return None
     match = re.search(r'playlist/([a-zA-Z0-9]{22})', url_or_uri)
     if match:
         return match.group(1)
@@ -92,28 +98,43 @@ def run_sync_job(tracked_playlist_db_id):
 
             token = new_token_info['access_token']
 
-            # --- Perform the sync logic (copied and adapted from /sync route) ---
-            source_data = spotify_client.get_playlist_details(token, tracked_playlist.source_playlist_id)
-            source_uris = set(spotify_client.get_all_track_uris(token, source_data))
-
-            tracked_data = spotify_client.get_playlist_details(token, tracked_playlist.tracked_playlist_id)
-            tracked_uris = set(spotify_client.get_all_track_uris(token, tracked_data))
-
-            disliked_songs = db.session.execute(db.select(DislikedSong).where(DislikedSong.tracked_playlist_id == tracked_playlist.id)).scalars().all()
-            disliked_uris_db = {song.song_uri for song in disliked_songs}
-
-            songs_to_add = list(source_uris - tracked_uris - disliked_uris_db)
-
-            if songs_to_add:
-                spotify_client.add_tracks_to_playlist(token, tracked_playlist.tracked_playlist_id, songs_to_add)
-                logging.info(f"Auto-sync for '{tracked_playlist.tracked_playlist_name}' added {len(songs_to_add)} songs.")
+            # Perform the sync (same pipeline as the manual /sync route)
+            added = service.perform_sync(tracked_playlist, token)
+            if added:
+                logging.info(f"Auto-sync for '{tracked_playlist.tracked_playlist_name}' added {added} songs.")
             else:
                 logging.info(f"Auto-sync for '{tracked_playlist.tracked_playlist_name}' complete. No new songs.")
-
-            tracked_playlist.last_synced = datetime.utcnow()
-            db.session.commit()
         except Exception as e:
+            db.session.rollback()
             logging.error(f"Auto-sync job failed for playlist {tracked_playlist_db_id}: {e}")
+
+
+def _add_auto_sync_job(tracked_playlist):
+    """Adds (or replaces) the weekly auto-sync job for a single tracked playlist."""
+    return scheduler.add_job(
+        id=f'sync_{tracked_playlist.id}',
+        func=run_sync_job,
+        args=[tracked_playlist.id],
+        trigger='interval',
+        weeks=1,
+        replace_existing=True
+    )
+
+
+def register_auto_sync_jobs():
+    """Re-registers auto-sync jobs for every tracked playlist with auto-sync enabled (called at boot)."""
+    auto_sync_playlists = db.session.execute(
+        db.select(TrackedPlaylist).where(TrackedPlaylist.auto_sync_enabled == True)
+    ).scalars().all()
+
+    for tp in auto_sync_playlists:
+        _add_auto_sync_job(tp)
+        tp.job_id = f"sync_{tp.id}"
+        logging.info(f"Re-registered auto-sync job for playlist {tp.id}")
+
+    # Persist job ids so legacy rows with NULL job_id are fixed and jobs can be
+    # removed cleanly on untrack/delete.
+    db.session.commit()
 
 
 # --- Routes ---
@@ -132,7 +153,16 @@ def login():
 
 @app.route('/callback')
 def callback():
-    token_info = sp_oauth.get_access_token(request.args['code'])
+    if request.args.get('error'):
+        flash(f"Spotify login failed: {request.args.get('error')}. Please try again.", 'error')
+        return redirect(url_for('index'))
+
+    code = request.args.get('code')
+    if not code:
+        flash("Authentication with Spotify was not completed.", "error")
+        return redirect(url_for('index'))
+
+    token_info = sp_oauth.get_access_token(code)
 
     # Save the refresh token to the database
     sp = spotipy.Spotify(auth=token_info['access_token'])
@@ -151,7 +181,7 @@ def callback():
 def logout():
     session.clear()
     flash("You have been successfully logged out.")
-    return '<h1>Logged out!</h1><p>You can now close this tab or <a href="http://127.0.0.1:8888/login">log in again</a>.</p>'
+    return render_template('logout.html')
 
 @app.route('/profile')
 def profile():
@@ -162,8 +192,19 @@ def profile():
     sp = spotipy.Spotify(auth=token)
     user_info = sp.current_user()
 
-    all_user_playlists_response = sp.current_user_playlists(limit=50)
-    all_user_playlists = all_user_playlists_response['items']
+    # Fetch all of the user's playlists, following pagination (with a safety cap)
+    all_user_playlists = []
+    offset = 0
+    while True:
+        page_response = sp.current_user_playlists(limit=50, offset=offset)
+        page_items = page_response['items'] or []
+        if not page_items:
+            break
+        all_user_playlists.extend(page_items)
+        offset += len(page_items)
+        if offset >= 1000:
+            logging.warning("Reached safety cap of 1000 playlists while fetching user playlists.")
+            break
 
     spotify_playlists_by_id = {p['id']: p for p in all_user_playlists}
 
@@ -285,18 +326,16 @@ def track():
             source_playlist_id=source_playlist_id,
             tracked_playlist_id=new_playlist_id,
             tracked_playlist_name=new_playlist_name,
-            last_synced=datetime.utcnow()
+            last_synced=datetime.now(timezone.utc)
         )
         db.session.add(new_tracked_playlist)
         db.session.commit()
 
         if track_uris:
-            for uri in track_uris:
-                snapshot_track = SyncedTrack(
-                    track_uri=uri,
-                    tracked_playlist_id=new_tracked_playlist.id
-                )
-                db.session.add(snapshot_track)
+            db.session.add_all([
+                SyncedTrack(track_uri=uri, tracked_playlist_id=new_tracked_playlist.id)
+                for uri in track_uris
+            ])
             db.session.commit()
 
         flash(f"Successfully created and tracked '{new_playlist_name}'!", 'success')
@@ -326,67 +365,11 @@ def sync(tracked_playlist_db_id):
         return redirect(url_for('profile'))
 
     try:
-        # --- STEP 1: Get all current states ---
-        # Get songs from the original source playlist on Spotify
-        source_data = spotify_client.get_playlist_details(token, tracked_playlist.source_playlist_id)
-        source_uris = set(spotify_client.get_all_track_uris(token, source_data))
-
-        # Get songs currently in the user's tracked playlist on Spotify
-        tracked_data = spotify_client.get_playlist_details(token, tracked_playlist.tracked_playlist_id)
-        current_tracked_uris = set(spotify_client.get_all_track_uris(token, tracked_data))
-
-        # Get the snapshot of tracks from our DB from the LAST successful sync
-        previous_synced_tracks = db.session.execute(
-            db.select(SyncedTrack).where(SyncedTrack.tracked_playlist_id == tracked_playlist.id)
-        ).scalars().all()
-        previous_synced_uris = {t.track_uri for t in previous_synced_tracks}
-
-        # Get all songs the user has ever disliked for this playlist
-        disliked_songs_db = db.session.execute(
-            db.select(DislikedSong).where(DislikedSong.tracked_playlist_id == tracked_playlist.id)
-        ).scalars().all()
-        disliked_uris = {s.song_uri for s in disliked_songs_db}
-
-        # --- STEP 2: Find songs the user manually removed (the new "disliked" songs) ---
-        # A song was removed by the user if it was in our last snapshot, but is NOT in the playlist now.
-        newly_disliked_uris = previous_synced_uris - current_tracked_uris
-        
-        if newly_disliked_uris:
-            for uri in newly_disliked_uris:
-                # Add to disliked table only if it's not already there
-                if uri not in disliked_uris:
-                    disliked_song = DislikedSong(song_uri=uri, tracked_playlist_id=tracked_playlist.id)
-                    db.session.add(disliked_song)
-            
-            # Update our in-memory set of disliked songs for the next step
-            disliked_uris.update(newly_disliked_uris)
-            logging.info(f"Recorded {len(newly_disliked_uris)} newly disliked songs.")
-
-        # --- STEP 3: Find new songs to add to the tracked playlist ---
-        # A song should be added if it's in the source, not already in the tracked playlist, 
-        # AND not in our master list of disliked songs.
-        songs_to_add = list(source_uris - current_tracked_uris - disliked_uris)
-
-        if songs_to_add:
-            spotify_client.add_tracks_to_playlist(token, tracked_playlist.tracked_playlist_id, songs_to_add)
-            flash(f"Sync complete! Added {len(songs_to_add)} new song(s).", 'success')
+        added = service.perform_sync(tracked_playlist, token)
+        if added:
+            flash(f"Sync complete! Added {added} new song(s).", 'success')
         else:
             flash("Sync complete! Your playlist is up to date.", 'success')
-
-        # --- STEP 4: Update the DB snapshot to the new state ---
-        # The new "correct" state is what's currently on Spotify plus the songs we just added.
-        new_snapshot_uris = current_tracked_uris.union(songs_to_add)
-        
-        # Delete the old snapshot
-        db.session.execute(db.delete(SyncedTrack).where(SyncedTrack.tracked_playlist_id == tracked_playlist.id))
-        
-        # Save the new snapshot
-        for uri in new_snapshot_uris:
-            db.session.add(SyncedTrack(track_uri=uri, tracked_playlist_id=tracked_playlist.id))
-
-        # Finally, update the sync timestamp and commit all changes
-        tracked_playlist.last_synced = datetime.utcnow()
-        db.session.commit()
 
     except requests.exceptions.HTTPError as e:
         db.session.rollback() # Rollback DB changes on error
@@ -411,14 +394,7 @@ def toggle_auto_sync(tracked_playlist_db_id):
     tracked_playlist.auto_sync_enabled = not tracked_playlist.auto_sync_enabled
 
     if tracked_playlist.auto_sync_enabled:
-        job = scheduler.add_job(
-            id=f'sync_{tracked_playlist.id}',
-            func=run_sync_job,
-            args=[tracked_playlist.id],
-            trigger='interval',
-            weeks=1,
-            replace_existing=True
-        )
+        job = _add_auto_sync_job(tracked_playlist)
         tracked_playlist.job_id = job.id
     else:
         if tracked_playlist.job_id:
@@ -458,13 +434,11 @@ def untrack(tracked_playlist_db_id):
     db.session.delete(playlist_to_untrack)
     db.session.commit()
 
-    undo_url = url_for('undo_untrack')
-    message = Markup(f"Successfully untracked '{playlist_to_untrack.tracked_playlist_name}'. <a href='{undo_url}' class='font-bold underline'>Undo</a>")
-    flash(message, 'success')
+    flash(f"Successfully untracked '{playlist_to_untrack.tracked_playlist_name}'.", 'success')
 
     return redirect(url_for('profile'))
 
-@app.route('/undo_untrack')
+@app.route('/undo_untrack', methods=['POST'])
 def undo_untrack():
     undo_data = session.pop('undo_data', None)
 
@@ -486,7 +460,8 @@ def undo_untrack():
 
 @app.route('/delete/<int:tracked_playlist_db_id>', methods=['POST'])
 def delete_playlist(tracked_playlist_db_id):
-    if not get_auth_token():
+    token = get_auth_token()
+    if not token:
         return redirect(url_for('login'))
 
     playlist_to_delete = db.session.get(TrackedPlaylist, tracked_playlist_db_id)
@@ -494,7 +469,7 @@ def delete_playlist(tracked_playlist_db_id):
         flash("Playlist not found in tracking database.", 'error')
         return redirect(url_for('profile'))
 
-    sp = spotipy.Spotify(auth=get_auth_token())
+    sp = spotipy.Spotify(auth=token)
     user_info = sp.current_user()
     if playlist_to_delete.user_id != user_info.get('id'):
         flash("You do not have permission to delete this playlist.", 'error')
@@ -590,7 +565,15 @@ with app.app_context():
 
 # Initialize and start the scheduler
 scheduler.init_app(app)
-scheduler.start()
+if not os.getenv("SKIP_SCHEDULER"):
+    scheduler.start()
+
+    # Re-register auto-sync jobs for playlists with auto-sync enabled (jobs don't survive restarts)
+    with app.app_context():
+        try:
+            register_auto_sync_jobs()
+        except Exception as e:
+            logging.error(f"Failed to re-register auto-sync jobs on startup: {e}")
 
 if __name__ == '__main__':
     # use_reloader=False is important for APScheduler to avoid running jobs twice

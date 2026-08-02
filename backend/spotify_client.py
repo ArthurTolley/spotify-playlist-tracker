@@ -1,8 +1,45 @@
 import requests
 import json
 import logging
+import time
 
 # --- Direct Spotify API Client using 'requests' ---
+
+def _get_with_retry(url: str, headers: dict, retries: int = 3) -> requests.Response:
+    """
+    GET with retry on transient failures:
+    - 429 (rate limited): honors the Retry-After header (seconds), default 1s
+    - 5xx (server errors): exponential backoff (1s, 2s, 4s)
+    Returns the last response after retries are exhausted so callers can
+    raise_for_status() and handle the HTTPError as before.
+    """
+    attempt = 0
+    while True:
+        attempt += 1
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 429 and attempt <= retries:
+            # Backoff delay (1s, 2s, 4s) doubles as the default/fallback delay.
+            delay = min(2 ** (attempt - 1), 5)
+            retry_after = response.headers.get('Retry-After')
+            if retry_after:
+                try:
+                    # Retry-After can be seconds or an HTTP-date; only seconds are supported here.
+                    delay = min(float(retry_after), 5)
+                except ValueError:
+                    # HTTP-date or garbage — fall back to the backoff delay.
+                    pass
+            logging.warning(f"Rate limited (429) fetching {url}; retrying in {delay}s (attempt {attempt}/{retries})")
+            time.sleep(delay)
+            continue
+
+        if response.status_code >= 500 and attempt <= retries:
+            delay = min(2 ** (attempt - 1), 5)  # 1s, 2s, 4s, capped at 5s
+            logging.warning(f"Server error {response.status_code} fetching {url}; retrying in {delay}s (attempt {attempt}/{retries})")
+            time.sleep(delay)
+            continue
+
+        return response
 
 def get_playlist_details(token: str, playlist_id: str) -> dict:
     """
@@ -12,7 +49,7 @@ def get_playlist_details(token: str, playlist_id: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
 
     logging.info(f"Fetching details for playlist: {playlist_id}")
-    response = requests.get(api_url, headers=headers)
+    response = _get_with_retry(api_url, headers)
 
     # Raise an error for bad status codes (4xx or 5xx)
     response.raise_for_status()
@@ -36,7 +73,7 @@ def get_all_track_uris(token: str, playlist_data: dict) -> list:
 
     while next_url:
         logging.info("Fetching next page of tracks...")
-        response = requests.get(next_url, headers=headers)
+        response = _get_with_retry(next_url, headers)
         response.raise_for_status()
         next_page_data = response.json()
 

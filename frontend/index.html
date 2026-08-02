@@ -23,8 +23,10 @@
                 } 
             } 
         }
-        // Configuration - Backend API URL via Cloudflare Tunnel
-        const API_BASE_URL = 'https://spotify.4298756.xyz';
+        // Configuration - Backend API URL (same origin when served locally; Cloudflare tunnel on GitHub Pages)
+        const API_BASE_URL = window.location.hostname.endsWith('github.io')
+            ? 'https://spotify.4298756.xyz'
+            : window.location.origin;
     </script>
     <style>
         body { 
