@@ -1,0 +1,80 @@
+# Default values for spotify-tracker.
+# Override with a values file or --set. ArgoCD inline values in
+# home-cluster/infra/spotify-tracker/application.yaml.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/arthurtolley/spotify-playlist-tracker-backend
+  tag: latest
+  pullPolicy: Always
+
+# Non-secret config (goes into ConfigMap)
+config:
+  spotifyRedirectUri: https://spotify.192.168.0.205.nip.io/callback
+  corsOrigins: https://spotify.192.168.0.205.nip.io,https://arthurtolley.github.io
+  flaskEnv: production
+
+# Secrets — do not commit real values. Prefer existingSecret in production.
+secrets:
+  # If existingSecret is set, chart does NOT create a Secret — you manage it
+  # outside (e.g. kubectl create secret generic ...).
+  existingSecret: ""
+  # Only used when existingSecret == "". Placeholder values; override at deploy time.
+  spotifyClientId: ""
+  spotifyClientSecret: ""
+  flaskSecretKey: "" # leave empty to let the pod generate an ephemeral key (sessions reset on restart)
+  # DATABASE_URL is templated from postgres when postgres.enabled=true.
+  # Set only for external DB.
+  databaseUrl: ""
+
+postgresql:
+  enabled: true
+  auth:
+    username: spotifytracker
+    # Leave empty to auto-generate; set via --set or existingSecret for stable password.
+    password: ""
+    database: spotify_tracker
+  image: postgres:16-alpine
+  storage:
+    size: 5Gi
+    storageClassName: longhorn
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+
+service:
+  type: ClusterIP
+  port: 8888
+
+ingress:
+  enabled: true
+  host: spotify.192.168.0.205.nip.io
+  tlsSecret: spotify-tracker-tls
+  clusterIssuer: home-ca
+  # Traefik entry points for the redirect + secure routes
+  entryPoints:
+    web: web
+    websecure: websecure
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+
+# Pin stateful + backend to workers (control-plane is Pi 5, workers hold Longhorn replicas).
+# Set to {} to schedule anywhere.
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: [node1, node2]

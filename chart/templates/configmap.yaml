@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "spotify-tracker.fullname" . }}-config
+  labels:
+    {{- include "spotify-tracker.labels" . | nindent 4 }}
+data:
+  SPOTIPY_REDIRECT_URI: {{ .Values.config.spotifyRedirectUri | quote }}
+  CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  FLASK_ENV: {{ .Values.config.flaskEnv | quote }}

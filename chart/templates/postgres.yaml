@@ -1,0 +1,103 @@
+{{- if .Values.postgresql.enabled }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "spotify-tracker.fullname" . }}-postgres
+  labels:
+    {{- include "spotify-tracker.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  POSTGRES_USER: {{ .Values.postgresql.auth.username | quote }}
+  POSTGRES_PASSWORD: {{ include "spotify-tracker.postgresPassword" . | quote }}
+  POSTGRES_DB: {{ .Values.postgresql.auth.database | quote }}
+  # ponytail: password is randAlphaNum on first install when not set; set postgresql.auth.password explicitly for reproducible GitOps
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "spotify-tracker.fullname" . }}-postgres
+  labels:
+    {{- include "spotify-tracker.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+    # ponytail: keep PVC on helm uninstall / argocd prune — DB survives
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: {{ .Values.postgresql.storage.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.postgresql.storage.size | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spotify-tracker.fullname" . }}-postgres
+  labels:
+    {{- include "spotify-tracker.labels" . | nindent 4 }}
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: postgres
+        release: {{ .Release.Name }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postgres
+          image: {{ .Values.postgresql.image }}
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "spotify-tracker.fullname" . }}-postgres
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "spotify-tracker.fullname" . }}-postgres
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "spotify-tracker.fullname" . }}-postgres
+                  key: POSTGRES_DB
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "spotify-tracker.fullname" . }}-postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spotify-tracker.fullname" . }}-postgres
+  labels:
+    {{- include "spotify-tracker.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+    release: {{ .Release.Name }}
+  ports:
+    - port: 5432
+      targetPort: 5432
+{{- end }}

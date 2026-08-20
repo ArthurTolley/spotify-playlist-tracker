@@ -1,0 +1,15 @@
+apiVersion: v2
+name: spotify-tracker
+description: Spotify Playlist Tracker — backend + Postgres + Traefik ingress
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - spotify
+  - playlist
+  - flask
+home: https://github.com/ArthurTolley/spotify-playlist-tracker
+sources:
+  - https://github.com/ArthurTolley/spotify-playlist-tracker
+maintainers:
+  - name: ArthurTolley

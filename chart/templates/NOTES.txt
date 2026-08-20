@@ -1,0 +1,25 @@
+Spotify Tracker deployed as {{ .Release.Name }} in namespace {{ .Release.Namespace }}.
+
+Host: https://{{ .Values.ingress.host }}
+Backend service: {{ include "spotify-tracker.fullname" . }}:{{ .Values.service.port }}
+
+Next steps:
+  1. Create the secrets (if not using existingSecret):
+     kubectl create secret generic {{ include "spotify-tracker.backendSecretName" . }} \
+       --from-literal=SPOTIPY_CLIENT_ID=... \
+       --from-literal=SPOTIPY_CLIENT_SECRET=... \
+       --from-literal=FLASK_SECRET_KEY=$(openssl rand -hex 32) \
+       -n {{ .Release.Namespace }}
+
+     For bundled Postgres, DATABASE_URL is auto-generated. For external DB set
+     secrets.databaseUrl and set postgresql.enabled=false.
+
+  2. Add the redirect URI in Spotify Dashboard:
+     {{ .Values.config.spotifyRedirectUri }}
+
+  3. Check status:
+     kubectl -n {{ .Release.Namespace }} get pods
+     kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "spotify-tracker.fullname" . }}
+
+Database is non-destructive: entrypoint runs `db.create_all()` only (adds missing
+tables, never drops). PVC is longhorn/ReadWriteOnce with reclaim Retain.

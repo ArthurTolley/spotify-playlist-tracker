@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spotify-tracker.fullname" . }}
+  labels:
+    {{- include "spotify-tracker.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/name: spotify-tracker
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: 8888
+      protocol: TCP
+  # ponytail: sessionAffinity removed — add only with >1 replica + shared session store
